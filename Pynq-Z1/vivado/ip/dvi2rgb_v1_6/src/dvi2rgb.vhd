@@ -111,7 +111,7 @@ architecture Behavioral of dvi2rgb is
 type dataIn_t is array (2 downto 0) of std_logic_vector(7 downto 0);
 type eyeSize_t is array (2 downto 0) of std_logic_vector(kIDLY_TapWidth-1 downto 0);
 signal aLocked, SerialClk_int, PixelClk_int, pLockLostRst: std_logic;
-signal pRdy, pVld, pDE, pAlignErr, pC0, pC1 : std_logic_vector(2 downto 0);
+signal pRdy, pVld, pDE, pAlignErr, pC0, pC1, pVGrdBnd : std_logic_vector(2 downto 0);
 signal pDataIn : dataIn_t;
 signal pEyeSize : eyeSize_t;
 
@@ -119,6 +119,8 @@ signal aRst_int, pRst_int : std_logic;
 
 signal pData : std_logic_vector(23 downto 0);
 signal pVDE, pHSync, pVSync : std_logic;
+signal pVDE_HDMI, pVDE_DVI : std_logic;
+signal pGrdBnd : std_logic;
 
 begin
 
@@ -163,6 +165,7 @@ LockLostReset: entity work.ResetBridge
 DataDecoders: for iCh in 2 downto 0 generate
    DecoderX: entity work.TMDS_Decoder
       generic map (
+         kGrdBnd => kGrdBnds(iCh),
          kCtlTknCount => kMinTknCntForBlank, --how many subsequent control tokens make a valid blank detection (DVI spec)
          kTimeoutMs => kBlankTimeoutMs, --what is the maximum time interval for a blank to be detected (DVI spec)
          kRefClkFrqMHz => 200, --what is the RefClk frequency
@@ -185,6 +188,7 @@ DataDecoders: for iCh in 2 downto 0 generate
          pMeRdy                  => pRdy(iCh),                
          pMeVld                  => pVld(iCh),                
          pVde                    => pDE(iCh),                  
+         pGrdBnd                 => pVGrdBnd(iCh),
          pDataIn(7 downto 0)     => pDataIn(iCh),   
          pEyeSize                => pEyeSize(iCh)
       );
@@ -198,8 +202,10 @@ pData(7 downto 0) <= pDataIn(0); -- green is channel 1
 pData(15 downto 8) <= pDataIn(1); -- blue is channel 0
 pHSync <= pC0(0); -- channel 0 carries control signals too
 pVSync <= pC1(0); -- channel 0 carries control signals too
-pVDE <= pDE(0); -- since channels are aligned, all of them are either active or blanking at once
-
+pVDE_DVI <= 0; --not (pC0(1) or pC1(1) or pC0(2) or pC1(2));
+pVDE_HDMI <= pC0(1) and (not pC1(1)) and (not pC0(2)) and (not pC1(2));
+pGrdBnd <= not (pVGrdBnd(0) and pVGrdBnd(1) and pVGrdBnd(2));
+pVDE <= (pDE(0) and pDE(1) and pDE(2) and (pVDE_DVI or pVDE_HDMI) and pGrdBnd); -- since channels are aligned, all of them are either active or blanking at once
 -- Clock outputs
 SerialClk <= SerialClk_int; -- fast 5x pixel clock for advanced use only
 aPixelClkLckd <= aLocked;

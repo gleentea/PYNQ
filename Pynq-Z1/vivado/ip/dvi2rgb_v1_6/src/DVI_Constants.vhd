@@ -54,13 +54,17 @@ use IEEE.STD_LOGIC_1164.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
+
+
 package DVI_Constants is
+   type T_GUARD_BANDS is array (2 downto 0) of std_logic_vector(9 downto 0);
    -- DVI Control Tokens
    constant kCtlTkn0 : std_logic_vector(9 downto 0) := "1101010100";
    constant kCtlTkn1 : std_logic_vector(9 downto 0) := "0010101011";
    constant kCtlTkn2 : std_logic_vector(9 downto 0) := "0101010100";
    constant kCtlTkn3 : std_logic_vector(9 downto 0) := "1010101011";
-   
+   constant kGrdBnds : T_GUARD_BANDS := ("1011001100","0100110011","1011001100");
+
    constant kMinTknCntForBlank : natural := 128; --tB
    constant kBlankTimeoutMs : natural := 50;
 end DVI_Constants;

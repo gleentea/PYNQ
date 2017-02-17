@@ -60,6 +60,7 @@ use work.DVI_Constants.ALL;
 
 entity TMDS_Decoder is
    Generic (
+      kGrdBnd : std_logic_vector(9 downto 0) := "1011001100";
       kCtlTknCount : natural := 128; --how many subsequent control tokens make a valid blank detection
       kTimeoutMs : natural := 50; --what is the maximum time interval for a blank to be detected
       kRefClkFrqMHz : natural := 200; --what is the RefClk frequency
@@ -80,7 +81,8 @@ entity TMDS_Decoder is
       pC0 : out std_logic;
       pC1 : out std_logic;
       pVde : out std_logic;
-      
+      pGrdBnd : out std_logic;
+
       -- Channel bonding (three data channels in total)
       pOtherChVld : in std_logic_vector(1 downto 0);
       pOtherChRdy : in std_logic_vector(1 downto 0);
@@ -257,7 +259,13 @@ begin
    if Rising_Edge(PixelClk) then
       if (pMeRdy_int = '1' and pOtherChRdy = "11") then
          pDataIn <= x"00"; --added for VGA-compatibility (blank pixel needed during blanking)
-         
+         case (pDataInBnd) is
+         when kGrdBnd =>
+            pGrdBnd <= '1';
+         when others =>
+            pGrdBnd <= '0';
+         end case;
+
          case (pDataInBnd) is
             --Control tokens decode straight to C0, C1 values
             when kCtlTkn0 =>
@@ -278,7 +286,7 @@ begin
                pVde <= '0';
             --If not control token, it's encoded data
             when others =>
-               pVde <= '1'; 
+               pVde <= '1';
                pDataIn(0) <= pDataIn8b(0);
                for iBit in 1 to 7 loop
                   if (pDataInBnd(8) = '1') then
@@ -293,6 +301,7 @@ begin
          pC1 <= '0';
          pVde <= '0';
          pDataIn <= x"00";
+         pGrdBnd <= '0';
       end if;
    end if;
 end process;
